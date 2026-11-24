@@ -22,7 +22,15 @@ async def lifespan(app: FastAPI):
     purge_expired_archives()
     yield
 
-app = FastAPI(title="Tovin API", description="AI-powered message analysis and contextual assistance.", version="4.0.0", lifespan=lifespan)
+app = FastAPI(
+    title="Tovin API",
+    description="AI-powered message analysis and contextual assistance.",
+    version="4.0.0",
+    lifespan=lifespan,
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
+)
 # Only the frontends listed in ALLOWED_ORIGINS (backend/.env or Render settings) may call the API.
 app.add_middleware(CORSMiddleware, allow_origins=ALLOWED_ORIGINS, allow_credentials=False, allow_methods=["GET", "POST", "PATCH", "DELETE"], allow_headers=["Content-Type"])
 

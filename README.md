@@ -2,22 +2,22 @@
 
 _Enterprise Structured Ingestion Firewall_
 
-A beginner-friendly AI project. You chat with **Tovin**, an AI assistant in a React web app, and for every message the backend:
+Tovin is an AI assistant built with React and FastAPI. When you send a message, the backend:
 
-1. **Week 1 – Understands it.** An LLM sorts the message into a fixed category (payment issue, order tracking, greeting…) and returns structured JSON. Pydantic checks that JSON before anything else uses it.
-2. **Week 2 – Answers it.** A second LLM call uses that checked JSON to write a helpful reply in Markdown.
-3. **Week 3 – Remembers it.** Every conversation is saved in a **SQLite** database, so follow-up questions ("what about my other order?") make sense and you can reopen old chats.
+1. **Classifies it.** An LLM assigns the message to a category (such as payment issue, order tracking, or greeting) and returns structured JSON. Pydantic validates the result.
+2. **Answers it.** A second LLM call uses the validated result to write a helpful reply in Markdown.
+3. **Keeps the conversation.** Messages are saved in a **SQLite** database so follow-up questions make sense and you can reopen old chats.
 
 The "firewall" idea: the AI's output is not trusted until it passes a strict schema. If the model returns a category that doesn't exist or a missing field, the app rejects it.
 
-## What you will learn
+## Built with
 
-- Building an API with **FastAPI**
-- Calling a cloud LLM (**Groq**) from Python
-- Getting **structured output** from an LLM with **Instructor**
-- **Validating** data with **Pydantic**
-- Saving chat history in **SQLite** (built into Python, no server needed)
-- Building a **React + Vite** frontend and connecting it to an API
+- **FastAPI** for the API
+- **Groq** for the hosted language model
+- **Instructor** for structured LLM output
+- **Pydantic** for data validation
+- **SQLite** for local chat history (built into Python)
+- **React + Vite** for the frontend
 
 ## Key words (quick glossary)
 
@@ -45,12 +45,12 @@ The "firewall" idea: the AI's output is not trusted until it passes a strict sch
  POST /api/analyze { message, session_id? } ──► FastAPI backend (port 8000)
                                                   │
      1. Check the input                 schemas/ingestion.py
-     2. WEEK 1: classify it             services/llm_service.py      ── LLM call #1
+     2. Classify the message             services/llm_service.py      ── LLM call #1
           └─ Pydantic validates the JSON
      3. Estimate tokens                 utils/token_counter.py
-     4. WEEK 3: load recent history     services/database_service.py ── SQLite
-     5. WEEK 2: write a reply           services/response_service.py ── LLM call #2
-     6. WEEK 3: save both messages      services/database_service.py ── SQLite
+     4. Load recent history     services/database_service.py ── SQLite
+     5. Write a reply           services/response_service.py ── LLM call #2
+     6. Save both messages      services/database_service.py ── SQLite
                                                   │
         ◄──── JSON: intent details + response_markdown + session_id
         │
@@ -139,7 +139,6 @@ The database is in `.gitignore`, so your chats are never pushed to GitHub.
 |---|---|---|
 | `GET` | `/` | Simple status: `{"service": "Tovin API", "status": "running"}` |
 | `GET` | `/health` | Server status: `database_ok`, `groq_api_key_configured`, `model`. Never calls the LLM or shows secrets. |
-| `GET` | `/docs` | Interactive documentation: try every endpoint in the browser |
 | `POST` | `/api/analyze` | Send `{ "message": "...", "session_id": "optional" }`; returns intent, risk, priority, the Markdown answer and `session_id` |
 | `GET` | `/api/conversations` | The 30 most recent conversations |
 | `POST` | `/api/analyze/stream` | Same as above, but the answer streams in piece by piece (used by the app). Add `"incognito": true` to save nothing. Ends with input/output token counts. |
@@ -224,7 +223,6 @@ If you change `VITE_API_URL` later, **redeploy** on Vercel: Vite bakes it into t
 |---|---|
 | `https://<render-url>/` | `{"service": "Tovin API", "status": "running"}` |
 | `https://<render-url>/health` | `"status": "ok"`, `"database_ok": true`, `"groq_api_key_configured": true` |
-| `https://<render-url>/docs` | Interactive API page |
 | `https://<render-url>/api/conversations` | `{"items": [...]}` |
 | Vercel site → sidebar dot | Green, "Backend connected" |
 | Send a message on the Vercel site | Answer appears; right panel shows the intent |
@@ -242,7 +240,7 @@ If you change `VITE_API_URL` later, **redeploy** on Vercel: Vite bakes it into t
 |---|---|---|
 | Red dot / "Backend offline" in the app | Backend isn't running | Do Step 3 |
 | `npm` is not recognized | Node.js isn't installed | Install it from https://nodejs.org and reopen the terminal |
-| `{"detail":"Not Found"}` at http://127.0.0.1:8000/ | Normal: there is no `/` route | Use `/docs` or `/health` |
+| `{"detail":"Not Found"}` at an undocumented route | Expected for disabled API documentation routes | Use `/health` to check backend status |
 | `502 The AI request failed` | Wrong key, or the model name doesn't exist | See [backend/README.md](backend/README.md#troubleshooting) |
 | `Activate.ps1 cannot be loaded` | PowerShell blocks scripts | Run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once |
 | Port already in use | An old server is still running | Press `Ctrl + C` in its terminal, then start again |
@@ -260,12 +258,12 @@ enterprise-ingestion-firewall/
 │   │   ├── main.py                ← all API routes
 │   │   ├── config.py              ← reads your .env file
 │   │   ├── schemas/
-│   │   │   ├── ingestion.py       ← Week 1 data rules (input + intent result)
-│   │   │   └── assistant.py       ← Week 2 data rules (adds answer + session_id)
+│   │   │   ├── ingestion.py       ← Input and intent validation
+│   │   │   └── assistant.py       ← Response and session data
 │   │   ├── services/
-│   │   │   ├── llm_service.py     ← Week 1: classify the message
-│   │   │   ├── response_service.py← Week 2: write the answer
-│   │   │   └── database_service.py← Week 3: save/load chats in SQLite
+│   │   │   ├── llm_service.py     ← Classify the message
+│   │   │   ├── response_service.py← Generate the answer
+│   │   │   └── database_service.py← Save and load chats in SQLite
 │   │   └── utils/token_counter.py ← estimates token count
 │   ├── sql/schema.sql             ← the database tables (reference)
 │   ├── tests/                     ← pytest tests
