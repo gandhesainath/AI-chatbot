@@ -44,6 +44,12 @@ const suggestions = [
 
 function Icon({ name, size = 16, strokeWidth = 1.8 }) {
   const paths = {
+    user: (
+      <>
+        <circle cx="12" cy="8" r="3.5" />
+        <path d="M5 20a7 7 0 0 1 14 0" />
+      </>
+    ),
     assistant: (
       <>
         <path d="M12 2.8 14.2 8l5 2-5 2.2-2.2 5-2.1-5-5.1-2.2 5.1-2z" />
@@ -166,7 +172,15 @@ function isChatRoute() {
 }
 
 async function fetchJSON(path, options) {
-  const response = await fetch(`${API_URL}${path}`, options);
+  let response;
+  try {
+    response = await fetch(`${API_URL}${path}`, options);
+  } catch (error) {
+    if (isNetworkError(error)) {
+      throw new Error("Unable to proceed. Please check your connection and try again.");
+    }
+    throw error;
+  }
   if (!response.ok) {
     let detail = `Request failed (${response.status})`;
     try {
@@ -183,6 +197,14 @@ async function fetchJSON(path, options) {
   }
   if (response.status === 204) return null;
   return response.json();
+}
+
+function isNetworkError(error) {
+  return error instanceof TypeError || /failed to fetch|networkerror|load failed/i.test(error?.message || "");
+}
+
+function userAvatar(size = 15) {
+  return <Icon name="user" size={size} strokeWidth={1.7} />;
 }
 
 function formatGroup(dateString) {
@@ -343,7 +365,7 @@ function Message({ message, onRetry }) {
           </>
         )}
       </div>
-      {isUser && <div className="avatar user-avatar">Y</div>}
+      {isUser && <div className="avatar user-avatar">{userAvatar()}</div>}
     </article>
   );
 }
@@ -467,7 +489,7 @@ function LandingPage({ onStartChat }) {
                 <span><i /> Context ready</span>
               </div>
               <div className="preview-user">
-                <span className="preview-avatar user">Y</span>
+                <span className="preview-avatar user">{userAvatar(13)}</span>
                 <div><small>YOU <time>JUST NOW</time></small><p>How can I make this idea simpler without losing what matters?</p></div>
               </div>
               <div className="preview-answer">
@@ -937,13 +959,16 @@ export default function App() {
         }
       }
     } catch (error) {
+      const userFacingError = isNetworkError(error)
+        ? "Unable to proceed. Please check your connection and try again."
+        : error.message;
       updateMessage(assistantId, (current) => ({
         ...current,
         content: streamedText
-          ? `${streamedText}\n\n**The reply was interrupted:** ${error.message}`
+          ? `${streamedText}\n\n**The reply was interrupted:** ${userFacingError}`
           : "",
         streaming: false,
-        error: error.message,
+        error: userFacingError,
       }));
       if (backendStatus !== "online") setBackendStatus("offline");
     } finally {
